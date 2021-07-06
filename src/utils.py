@@ -39,8 +39,6 @@ import plotly.express as px
 
 from PIL import Image
 
-from streamlit_plotly_events import plotly_events
-
 MAX_SIZE = 250000000 # 250MB
 temp_data_directory = './data/'
 temp_zip_folder = './temp/'
