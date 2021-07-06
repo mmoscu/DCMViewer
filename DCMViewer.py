@@ -163,27 +163,26 @@ if __name__ == "__main__":
 
                 img_view = normalize_image(filter_image2(axial_threshold, img3d[:, :, axial_slider]))
 
-                anno = st.button("Annotate on image")
+                anno = st.checkbox("Annotate on image")
                 if anno:
                     # figure for editing
                     fig_axial = px.imshow(img_view, #x="Xposition", y="Yposition",
                                 #hover_data={z: False},
-                                color_continuous_scale='gray', title="Interactive Annotation")
+                                color_continuous_scale='gray', title="Interactive Annotation", width = width)
                     
-                    fig_axial.update_layout(coloraxis_showscale=False)
                     fig_axial.update_xaxes(showticklabels=False)
                     fig_axial.update_yaxes(showticklabels=False)
-                    fig_axial.update_layout(clickmode='event+select',
+                    fig_axial.update_layout(coloraxis_showscale=False, clickmode='event+select',
                                 dragmode='drawline',
                                 newshape=dict(line_color='red'))
-                    fig_axial.show(config={'modeBarButtonsToAdd':['drawline',
+                    config={'modeBarButtonsToAdd':['drawline',
                                         'drawcircle',
                                         'drawrect',
                                         'eraseshape'
                                        ], 'displaylogo': False,
                                        'scrollZoom': True,
-                                       'toImageButtonOptions': {'filename': "axial_slice_{}".format(axial_slider+1)}})
-
+                                       'toImageButtonOptions': {'filename': "axial_slice_{}".format(axial_slider+1)}}
+                    st.plotly_chart(fig_axial, use_container_width=False, config=config)
                     #selected_points = plotly_events(fig_axial)
                     #print(selected_points)
                     #print("cucu")
@@ -191,9 +190,9 @@ if __name__ == "__main__":
                     #if len(state["selected_points_"])>0:
                     #    print("Last chosen point is: {} {}".format(selected_points[-1]['x'], selected_points[-1]['y']))
 
-
-                # figure for observation
-                st.image(img_view, caption='Slice {} out of {}'.format(axial_slider+1, img3d.shape[2], width=width))
+                else:
+                    # figure for observation
+                    st.image(img_view, caption='Slice {} out of {}'.format(axial_slider+1, img3d.shape[2], width=width))
 
             
             if 'Coronal' in options:
