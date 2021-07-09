@@ -1,3 +1,5 @@
+# LIBRARIES ********************************************************************************
+
 import os
 import pydicom
 import numpy as np
@@ -19,33 +21,28 @@ import functools
 import random
 import string
 from google_drive_downloader import GoogleDriveDownloader as gdd
-#import pydeck as pdk
-#from pydeck import View
 
 import streamlit as st
 from streamlit.hashing import _CodeHasher
 from streamlit.report_thread import get_report_ctx
 from streamlit.server.server import Server
 
-#import matplotlib.pyplot as plt
-# This import registers the 3D projection, but is otherwise unused.
-#from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
-
-#from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-
-from plotly.tools import FigureFactory as FF
-import plotly.graph_objects as go
+from plotly.figure_factory import create_trisurf
 import plotly.express as px
 
 from PIL import Image
 
-MAX_SIZE = 250000000 # 250MB
+# CONSTANTS ********************************************************************************
+
+MAX_SIZE = 250000000 # 250MB; defines the maximum size of accepted loaded .zip archives
 temp_data_directory = './data/'
 temp_zip_folder = './temp/'
 temp_zip_file = temp_zip_folder + 'data.zip'
 
+# UTILITARIES ******************************************************************************
+
 def store_data(file, temporary_location=temp_zip_file):
-    
+    """Recovers the reporarily stored .zip file and extracts it"""
     st.warning('Loading data from zip.')
 
     with open(temporary_location, 'wb') as out:
@@ -65,6 +62,7 @@ def store_data(file, temporary_location=temp_zip_file):
 
 
 def is_valid_url(url):
+    """Checks if the specified URL is valid"""
     regex = re.compile(
         r'^(?:http|ftp)s?://' # http:// or https://
         r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|' #domain...
@@ -75,12 +73,13 @@ def is_valid_url(url):
     return re.match(regex, url) is not None
 
 def is_zip_oversized(path, max_size=MAX_SIZE):
+    """Checks the size of the .zip archive"""
     if os.path.getsize(path) > max_size:
         return True
     return False
 
 def download_zip_from_url(url, dest_path=temp_zip_file): 
-    
+    """Doawnloads files from specified URL"""
     if is_valid_url(url):
 
         url_string = url.split('/')
@@ -110,10 +109,11 @@ def download_zip_from_url(url, dest_path=temp_zip_file):
         
 @st.cache(show_spinner=False)
 def processing_data(path):
+    """Loads (and caches) the DICOM files"""
     return read_DICOM_slices(path)
 
 def clear_data_storage(path):
-
+    """Clears data at the chosen path"""
     if os.path.isfile(path):
         os.remove(path)
 
@@ -121,9 +121,11 @@ def clear_data_storage(path):
         shutil.rmtree(path)
 
 def get_series_names(folder_names):
+    """Returns the name(s) of the serie(s)"""
     return [name.split('/')[-1] for name in folder_names]
 
 def number_of_dcm_files(folder):
+    """Counts the number of DICOM files in the folder"""
     counter = 0
     files = os.listdir(folder)
     for file in files:
@@ -133,16 +135,18 @@ def number_of_dcm_files(folder):
     return counter
 
 def is_zip_valid(path):
+    """Checks if the loaded .zip file is valid"""
     try:
         check_zip = zipfile.ZipFile(path)
         check_zip.close()
     except:
-        st.warning('Not a valid zip file.')
+        st.warning('Not a valid .zip file.')
         clear_data_storage(temp_zip_folder)
         return False
     return True
 
 def does_zip_have_dcm(file):
+    """Chcecks if the loaded .zip archive contains DICOM files"""
     if is_zip_valid(file):
         with zipfile.ZipFile(file) as zip_ref:
             name_list = zip_ref.namelist()
@@ -153,6 +157,7 @@ def does_zip_have_dcm(file):
     return False
 
 def get_DCM_valid_folders(folder, min_dcm=2):
+    """Selects paths towards valid folders and returns a list"""
     DCM_valid_folder = []
     for root, directories, files in os.walk(folder):
         if directories: # More than one directory
@@ -163,7 +168,7 @@ def get_DCM_valid_folders(folder, min_dcm=2):
     return DCM_valid_folder
 
 def download_button(object_to_download, download_filename, button_text, pickle_it=False):
-    
+    """Defines the logic behind the download button of the .json report"""
     if pickle_it:
         try:
             object_to_download = pickle.dumps(object_to_download)
@@ -224,6 +229,7 @@ def download_button(object_to_download, download_filename, button_text, pickle_i
     return dl_link
 
 def filter_image(threshold_value, img):
+    """Thresholds the image img"""
     img_ = img.copy()
     img_max = img.max()
     img_min = img.min()
@@ -232,21 +238,13 @@ def filter_image(threshold_value, img):
     img_[img_ > img_max] = img_max
     return img_
 
-def filter_image2(threshold_value, img):
-    img_ = img.copy()
-    img_max = img.max()
-    img_min = img.min()
-    img_ += (-threshold_value[1] + threshold_value[0])
-    img_[img_ < img_min] = img_min
-    img_[img_ > img_max] = img_max
-
-    return img_
-
 def normalize_image(img, axis=None):
+    """Normalizes an array"""
     return (img - img.min()) / (img.max() - img.min())
 
 
 def display_info(path):
+    """Fetches patient meta-data for display"""
     columns = ['PatientID', 'PatientName', 'StudyDescription', 'PatientBirthDate', 'StudyDate', 'Modality', 'Manufacturer', 'InstitutionName', 'ProtocolName']
     col_dict = {col: [] for col in columns}
     dicom_object = pydicom.dcmread(path + os.listdir(path)[0])
@@ -259,7 +257,7 @@ def display_info(path):
     return df
 
 def read_DICOM_slices(path):
-    
+    """Loads the DICOM slices from the specified path"""
     # Load the DICOM files
     files = []
 
@@ -307,7 +305,7 @@ def read_DICOM_slices(path):
     except:
         df = pd.DataFrame([])
 
-    del files, columns, col_dict, slices
+    del files, columns, col_dict, slices # unbinds variable names
 
     return img3d, df
 
@@ -388,30 +386,25 @@ def get_state(hash_funcs=None):
 
 @st.cache(show_spinner=False)
 def make_mesh(image, threshold, step_size=1):
-    """Build the mesh from the 3D slices and prepares it for 3D viewing"""
+    """Build the mesh from the 3D slices and prepares it for 3D viewing
+    The smaller the step-size, the more detailed but slower to compute"""
 
-    #print ("Transposing surface")
-    #p = image#.transpose(2,1,0)
-    
-    print ("Calculating surface")
-    verts, faces, norm, val = measure.marching_cubes(image, threshold, step_size=step_size, allow_degenerate=True) 
+    verts, faces, _, _ = measure.marching_cubes(image, threshold, step_size=step_size, allow_degenerate=True) 
     lx,ly,lz = zip(*verts)
-    print("alta meshare")
 
     return verts, faces, [max(lx), max(ly), max(lz)]
 
 @st.cache(show_spinner=False)
 def build_3D(img3d, threshold = 400):
+    """More information at https://www.raddq.com/dicom-processing-segmentation-visualization-in-python/
+    Creates the 3D rendering from the volume img3d"""
     verts, faces, lims = make_mesh(img3d, threshold, 5)
     x,y,z = zip(*verts) 
-    
-    print ("Drawing")
         
     # Make the colormap single color since the axes are positional not intensity. 
-    #    colormap=['rgb(255,105,180)','rgb(255,255,51)','rgb(0,191,255)']
-    colormap=['rgb(236, 236, 212)','rgb(236, 236, 212)']
+    colormap=['rgb(232, 232, 216)','rgb(232, 232, 216)']
         
-    fig3D2 = FF.create_trisurf(x=x,
+    fig3D2 = create_trisurf(x=x,
                         y=y, 
                         z=z, 
                         plot_edges=False,
