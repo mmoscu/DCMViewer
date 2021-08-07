@@ -21,7 +21,9 @@ Image used as icon: https://www.maxpixel.net/See-Icon-Eye-Viewing-1103593
 2. Posibility of loading other file extensions (either .rar archives) and single-file visualization.
 3. Add a text area for report writing and exportation as .pdf.
 
-## Currently hosted at https://share.streamlit.io/mmoscu/dcmviewer/main/DCMViewer.py
+## Currently hosted at https://share.streamlit.io/mmoscu/dcmviewer/main/DCMViewer.py 
+
+Note: due to the nature of the hosting, user experience may vary.
 
 ## How to use
 Use `pip install` to install streamlit and the packages from requirements.txt, then use `streamlit run DCMViewer.py` to run the app locally.
